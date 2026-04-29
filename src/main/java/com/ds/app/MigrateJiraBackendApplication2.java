@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@SpringBootApplication
+//@SpringBootApplication
 @RequiredArgsConstructor
 public class MigrateJiraBackendApplication2 implements CommandLineRunner { 
 	
