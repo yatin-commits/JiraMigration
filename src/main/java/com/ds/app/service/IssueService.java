@@ -20,6 +20,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -137,6 +139,14 @@ public class IssueService {
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
 
         JiraAttachment att = opt.get();
+
+        // ← Cloud URL hai toh redirect karo
+        if (att.getFtpPath().startsWith("http")) {
+            return ResponseEntity.status(302)
+                    .header("Location", att.getFtpPath())
+                    .build();
+        }
+
         String relativePath = att.getFtpPath().startsWith("/")
                 ? att.getFtpPath().substring(1)
                 : att.getFtpPath();
@@ -151,12 +161,20 @@ public class IssueService {
         try {
             Resource resource = new FileSystemResource(filePath);
             String mimeType   = Files.probeContentType(filePath);
+
+            // ← FIXED: Unicode filename encode karo — em dash, special chars safe
+            String encodedFilename = URLEncoder
+                    .encode(att.getFilename(), StandardCharsets.UTF_8)
+                    .replace("+", "%20");
+
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + att.getFilename() + "\"")
+                            "attachment; filename=\"" + encodedFilename + "\"; " +
+                            "filename*=UTF-8''" + encodedFilename)  // RFC 5987
                     .contentType(MediaType.parseMediaType(
                             mimeType != null ? mimeType : "application/octet-stream"))
                     .body(resource);
+
         } catch (Exception e) {
             log.error("Error serving file {}: {}", filePath, e.getMessage());
             return ResponseEntity.internalServerError().build();
@@ -236,16 +254,18 @@ public class IssueService {
                 .build();
     }
 
+    @Value("${app.base-url:http://localhost:8085}")
+    private String serverBaseUrl;
+
     private AttachmentDto toAttachmentDto(JiraAttachment a) {
         return AttachmentDto.builder()
                 .id(a.getId())
                 .filename(a.getFilename())
                 .uploadedAt(a.getUploadedAt())
                 .uploadedBy(a.getUserName())
-                .downloadUrl("/api/attachments/" + a.getId() + "/download")
+                .downloadUrl(serverBaseUrl + "/api/attachments/" + a.getId() + "/download")
                 .build();
     }
-
   
     private CommentDto toCommentDto(JiraComment c) {
         return CommentDto.builder()

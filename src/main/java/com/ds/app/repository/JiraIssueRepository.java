@@ -30,13 +30,26 @@ public interface JiraIssueRepository extends JpaRepository<JiraIssue, String> {
 			+ "WHERE UPPER(i.issueKey) LIKE CONCAT(:query, '%') ORDER BY i.issueKey")
 	List<String> findIssueKeysByQuery(@Param("query") String query, Pageable pageable);
 
-	@Query("SELECT i FROM JiraIssue i WHERE " + "(:projectKey IS NULL OR i.projectKey = :projectKey) AND "
-			+ "(:issueType  IS NULL OR i.issueType  = :issueType)  AND "
-			+ "(:issueKey   IS NULL OR i.issueKey   = :issueKey)   AND "
-			+ "(:search IS NULL OR i.summary LIKE CONCAT('%', :search, '%') OR "
-			+ " i.description LIKE CONCAT('%', :search, '%'))")
-	Page<JiraIssue> findWithFilters(@Param("projectKey") String projectKey, @Param("issueType") String issueType,
-			@Param("issueKey") String issueKey, @Param("search") String search, Pageable pageable);
+	@Query("SELECT i FROM JiraIssue i WHERE " +
+		       "(:projectKey IS NULL OR i.projectKey = :projectKey) AND " +
+		       "(:issueType  IS NULL OR i.issueType  = :issueType)  AND " +
+		       "(:issueKey   IS NULL OR i.issueKey   = :issueKey)   AND " +
+		       "(:search IS NULL OR (" +        // ← opening bracket
+		       "  i.summary     LIKE CONCAT('%', :search, '%') OR " +
+		       "  i.description LIKE CONCAT('%', :search, '%') OR " +
+		       "  i.issueKey    LIKE CONCAT('%', :search, '%') OR " +
+		       "  i.issueType   LIKE CONCAT('%', :search, '%') OR " +
+		       "  i.status      LIKE CONCAT('%', :search, '%') OR " +
+		       "  i.assignee    LIKE CONCAT('%', :search, '%') OR " +
+		       "  i.reporter    LIKE CONCAT('%', :search, '%')" +
+		       "))")                             // ← closing bracket
+		Page<JiraIssue> findWithFilters(
+		        @Param("projectKey") String projectKey,
+		        @Param("issueType")  String issueType,
+		        @Param("issueKey")   String issueKey,
+		        @Param("search")     String search,
+		        Pageable pageable
+		);
 
 	@Query("SELECT i FROM JiraIssue i " + "WHERE i.parentKey = :parentKey " + "ORDER BY i.issueKey ASC")
 	List<JiraIssue> findChildrenByParentKey(@Param("parentKey") String parentKey);
