@@ -26,7 +26,7 @@ public class JiraComment {
     @Column(name = "user_id", length = 100)
     private String userId;
 
-    // Resolved name from mapping (userId → name)
+    
     @Column(name = "user_name", length = 255)
     private String userName;
 

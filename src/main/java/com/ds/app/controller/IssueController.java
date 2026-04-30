@@ -17,26 +17,26 @@ public class IssueController {
 
     private final IssueService issueService;
 
-    // 1. GET /api/projects
+    //  GET /api/projects
     @GetMapping("/projects")
     public ResponseEntity<List<ProjectDto>> getProjects() {
         return ResponseEntity.ok(issueService.getProjects());
     }
 
-    // 2. GET /api/issue-types
+    //  GET /api/issue-types
     @GetMapping("/issue-types")
     public ResponseEntity<List<String>> getIssueTypes() {
         return ResponseEntity.ok(issueService.getIssueTypes());
     }
 
-    // 3. GET /api/issue-keys?query=WS
+    //  GET /api/issue-keys?query=WS
     @GetMapping("/issue-keys")
     public ResponseEntity<List<String>> getIssueKeys(
             @RequestParam(required = false, defaultValue = "") String query) {
         return ResponseEntity.ok(issueService.getIssueKeys(query));
     }
 
-    // 4. GET /api/issues
+    //  GET /api/issues
     @GetMapping("/issues")
     public ResponseEntity<PagedResponse<IssueListDto>> getIssues(
             @RequestParam(required = false) String projectKey,
@@ -52,7 +52,7 @@ public class IssueController {
                         search, prioritySort, page, pageSize));
     }
 
-    // 5. GET /api/issues/{issueKey}
+    //   /api/issues/{issueKey}
     @GetMapping("/issues/{issueKey}")
     public ResponseEntity<IssueDetailDto> getIssueDetail(@PathVariable String issueKey) {
         IssueDetailDto detail = issueService.getIssueDetail(issueKey);
@@ -60,13 +60,13 @@ public class IssueController {
         return ResponseEntity.ok(detail);
     }
 
-    // 6. GET /api/issues/{issueKey}/children
+    //  /api/issues/{issueKey}/children
     @GetMapping("/issues/{issueKey}/children")
     public ResponseEntity<List<IssueListDto>> getChildren(@PathVariable String issueKey) {
         return ResponseEntity.ok(issueService.getChildren(issueKey));
     }
 
-    // 7. GET /api/attachments/{id}/download
+    //  /api/attachments/{id}/download
     @GetMapping("/attachments/{id}/download")
     public ResponseEntity<Resource> downloadAttachment(@PathVariable Long id) {
         return issueService.getAttachmentDownload(id);

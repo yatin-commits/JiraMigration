@@ -46,27 +46,35 @@ public class IssueService {
         "Lowest",  5
     );
 
-    // 1. Projects list
+    
     public List<ProjectDto> getProjects() {
-        return issueRepository.findDistinctProjects()
-                .stream()
-                .map(row -> new ProjectDto((String) row[0], (String) row[1]))
-                .collect(Collectors.toList());
+        List<ProjectDto> projects = new ArrayList<>();
+
+        List<Object[]> rows = issueRepository.findDistinctProjects();
+        for (Object[] row : rows) {
+            String projectKey = (String) row[0];
+            String projectName = (String) row[1];
+
+            projects.add(new ProjectDto(projectKey, projectName));
+        }
+
+        return projects;
     }
 
-    // 2. Issue Types list
+
+    //  Issue Types list
     public List<String> getIssueTypes() {
         return issueRepository.findDistinctIssueTypes();
     }
 
-    // 3. Issue Keys autocomplete
+    //  Issue Keys autocomplete
     public List<String> getIssueKeys(String query) {
         if (query == null || query.isBlank()) return Collections.emptyList();
         return issueRepository.findIssueKeysByQuery(
                 query.trim().toUpperCase(), PageRequest.of(0, 10));
     }
 
-    // 4. Issues list with filters + pagination
+    //  Issues list with filters + pagination
     public PagedResponse<IssueListDto> getIssues(
             String projectKey, String issueType, String issueKey,
             String search, String prioritySort, int page, int pageSize) {
@@ -82,11 +90,18 @@ public class IssueService {
                 .collect(Collectors.toList());
 
         if ("asc".equalsIgnoreCase(prioritySort)) {
-            data.sort(Comparator.comparingInt(d ->
-                    PRIORITY_ORDER.getOrDefault(d.getPriority(), 99)));
-        } else if ("desc".equalsIgnoreCase(prioritySort)) {
-            data.sort(Comparator.comparingInt((IssueListDto d) ->
-                    PRIORITY_ORDER.getOrDefault(d.getPriority(), 99)).reversed());
+            Collections.sort(data, (a, b) -> {
+                int p1 = PRIORITY_ORDER.getOrDefault(a.getPriority(), 99);
+                int p2 = PRIORITY_ORDER.getOrDefault(b.getPriority(), 99);
+                return p1 - p2;   // High → Low
+            });
+        } 
+        else if ("desc".equalsIgnoreCase(prioritySort)) {
+            Collections.sort(data, (a, b) -> {
+                int p1 = PRIORITY_ORDER.getOrDefault(a.getPriority(), 99);
+                int p2 = PRIORITY_ORDER.getOrDefault(b.getPriority(), 99);
+                return p2 - p1;   // Low → High
+            });
         }
 
         return new PagedResponse<>(data, page, pageSize, result.getTotalElements());
@@ -97,13 +112,16 @@ public class IssueService {
         JiraIssue issue = issueRepository.findByIssueKey(issueKey);
         if (issue == null) return null;
 
-        List<AttachmentDto> attachments = attachmentRepository
-                .findByIssueKey(issueKey)
-                .stream()
-                .map(this::toAttachmentDto)
-                .collect(Collectors.toList());
+        List<AttachmentDto> attachments = new ArrayList<>();
 
-        // ← FIXED: chronological order
+        List<JiraAttachment> attachmentEntities =
+                attachmentRepository.findByIssueKey(issueKey);
+
+        for (JiraAttachment entity : attachmentEntities) {
+            attachments.add(toAttachmentDto(entity));
+        }
+
+        
         List<CommentDto> comments = commentRepository
                 .findByIssueKeyOrderByDate(issueKey)
                 .stream()
@@ -113,7 +131,7 @@ public class IssueService {
         return toDetailDto(issue, attachments, comments);
     }
 
-    // 6. File download
+    
     public ResponseEntity<Resource> getAttachmentDownload(Long id) {
         Optional<JiraAttachment> opt = attachmentRepository.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
@@ -123,8 +141,7 @@ public class IssueService {
                 ? att.getFtpPath().substring(1)
                 : att.getFtpPath();
 
-        Path filePath = Paths.get(downloadDir,
-                relativePath.replace("/", java.io.File.separator));
+        Path filePath = Paths.get(downloadDir, relativePath);
 
         if (!Files.exists(filePath)) {
             log.warn("File not found on disk: {}", filePath);
@@ -146,12 +163,16 @@ public class IssueService {
         }
     }
 
-    // 7. Children of an Epic
+    //  Children of an Epic
     public List<IssueListDto> getChildren(String parentKey) {
-        return issueRepository.findChildrenByParentKey(parentKey)
-                .stream()
-                .map(this::toListDto)
-                .collect(Collectors.toList());
+    	List<IssueListDto> result = new ArrayList<>();
+    	List<JiraIssue> children =
+    	        issueRepository.findChildrenByParentKey(parentKey);
+    	for (JiraIssue issue : children) {
+    	    result.add(toListDto(issue));
+    	}
+
+    	return result;
     }
 
     // ─── Mappers ───────────────────────────────────
@@ -201,7 +222,6 @@ public class IssueService {
                 .parentSummary(i.getParentSummary())
                 .storyPoints(i.getStoryPoints())
                 .epicName(i.getEpicName())
-                // ← ADDED: missing fields
                 .releaseNotes(i.getReleaseNotes())
                 .rootCause(i.getRootCause())
                 .zohoDeskTicket(i.getZohoDeskTicket())

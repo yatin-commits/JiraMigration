@@ -13,10 +13,10 @@ import java.util.Set;
 @Repository
 public interface JiraCommentRepository extends JpaRepository<JiraComment, Long> {
  
-    // Already exists — used by CsvImportService
+   
     List<JiraComment> findByIssueKeyIn(Set<String> issueKeys);
  
-    // ← UPDATED: chronological order by commentDate
+   
     @Query("SELECT c FROM JiraComment c " +
            "WHERE c.issueKey = :issueKey " +
            "ORDER BY c.commentDate ASC")
