@@ -140,7 +140,7 @@ public class IssueService {
 
         JiraAttachment att = opt.get();
 
-        // ← Cloud URL hai toh redirect karo
+       
         if (att.getFtpPath().startsWith("http")) {
             return ResponseEntity.status(302)
                     .header("Location", att.getFtpPath())
@@ -162,7 +162,7 @@ public class IssueService {
             Resource resource = new FileSystemResource(filePath);
             String mimeType   = Files.probeContentType(filePath);
 
-            // ← FIXED: Unicode filename encode karo — em dash, special chars safe
+           
             String encodedFilename = URLEncoder
                     .encode(att.getFilename(), StandardCharsets.UTF_8)
                     .replace("+", "%20");
@@ -170,7 +170,7 @@ public class IssueService {
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "attachment; filename=\"" + encodedFilename + "\"; " +
-                            "filename*=UTF-8''" + encodedFilename)  // RFC 5987
+                            "filename*=UTF-8''" + encodedFilename)  
                     .contentType(MediaType.parseMediaType(
                             mimeType != null ? mimeType : "application/octet-stream"))
                     .body(resource);
@@ -181,7 +181,7 @@ public class IssueService {
         }
     }
 
-    //  Children of an Epic
+   
     public List<IssueListDto> getChildren(String parentKey) {
     	List<IssueListDto> result = new ArrayList<>();
     	List<JiraIssue> children =
